@@ -18,4 +18,4 @@ jobs:
     secrets:
       TS_OAUTH_ID: TJqYefgm8i11CNTRL-kHsN2HPrM311CNTRL
       TS_AUDIENCE: api.tailscale.com/TJqYefgm8i11CNTRL-kHsN2HPrM311CNTRL
-      TS_TAILNET: "-"
+      TS_TAILNET: tail4cf2f3.ts.net
