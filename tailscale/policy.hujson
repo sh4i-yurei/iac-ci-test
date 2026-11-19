@@ -1,0 +1,335 @@
+// Tailnet policy file for keepbreath.ing. This is the record; after each merge it goes live
+// through Tailscale's API, validated first and read back (OpenBao on the hub decision #70).
+//
+// Machines are tagged, people are members. Tailscale SSH is the way into every tagged
+// machine, as keepbreath0, in check mode: tailnet identity plus a fresh browser
+// confirmation. Each grant allows only what something here needs, and the tests below prove
+// each one (Infrastructure as code decisions #118 and #125).
+{
+	// Define the tags which can be applied to devices and by which users.
+	// "tagOwners": {
+	//   "tag:example": ["autogroup:admin"],
+	// },
+
+	// Define grants that govern access for users, groups, autogroups, tags,
+	// Tailscale IP addresses, and subnet ranges.
+	"grants": [
+		// Vaultwarden: my own devices (laptop, phone), and the hub for Gatus's check of /alive.
+		// Monitoring and alerting decision #31.
+		{
+			"src": ["autogroup:member", "tag:hub"],
+			"dst": ["svc:vault"],
+			"ip":  ["443"],
+		},
+
+		// ntfy: my own devices (laptop, phone), and the hub itself for the producers that
+		// run on it. Notification service decision #5.
+		{
+			"src": ["autogroup:member", "tag:hub"],
+			"dst": ["svc:ntfy"],
+			"ip":  ["443"],
+		},
+
+		// Grafana: my own devices (laptop, phone), and the hub for Gatus's health check.
+		// Monitoring and alerting decisions #16 and #18; Infrastructure as code decision #118.
+		{
+			"src": ["autogroup:member", "tag:hub"],
+			"dst": ["svc:grafana"],
+			"ip":  ["443"],
+		},
+
+		// Backup server: vaultserv only. Backups decisions #29 and #31.
+		{
+			"src": ["tag:vault"],
+			"dst": ["svc:backup"],
+			"ip":  ["443"],
+		},
+
+		// OpenBao: the hub itself, for the services that run on it, and my own devices, to put
+		// secrets in. OpenBao on the hub decision #16; Infrastructure as code decision #118.
+		{
+			"src": ["autogroup:member", "tag:hub"],
+			"dst": ["svc:openbao"],
+			"ip":  ["443"],
+		},
+
+		// OpenBao: Infrastructure as code's jobs, wherever they run. OpenBao on the hub decision #70.
+		{
+			"src": ["tag:iac-runner"],
+			"dst": ["svc:openbao"],
+			"ip":  ["443"],
+		},
+
+		// node_exporter: the hub scrapes port 9100 on every machine with host metrics.
+		// Monitoring and alerting decisions #26 and #30.
+		{
+			"src": ["tag:hub"],
+			"dst": ["tag:vault", "tag:bastion", "100.116.219.6", "10.128.0.3", "10.128.0.4"],
+			"ip":  ["9100"],
+		},
+
+		// Journal gateway: the hub pulls logs from every other server.
+		// Monitoring and alerting decisions #36 and #56.
+		{
+			"src": ["tag:hub"],
+			"dst": ["tag:vault", "tag:bastion", "100.116.219.6", "10.128.0.3", "10.128.0.4"],
+			"ip":  ["19531"],
+		},
+
+		// Podman exporter: the hub scrapes web, control and vaultserv, as step 8h requires.
+		// Monitoring and alerting decision #55.
+		{
+			"src": ["tag:hub"],
+			"dst": ["tag:vault", "tag:bastion", "10.128.0.3"],
+			"ip":  ["9882"],
+		},
+
+		// State store: the hub's backup, and Infrastructure as code's jobs.
+		// Infrastructure as code decisions #21 and #118.
+		{
+			"src": ["tag:hub", "tag:iac-runner"],
+			"dst": ["svc:tofu-state"],
+			"ip":  ["443"],
+		},
+
+		// The hub's nightly pull from web and mail, through control's subnet route.
+		// Backups; Infrastructure as code decision #118.
+		{
+			"src": ["tag:hub"],
+			"dst": ["10.128.0.3", "10.128.0.4"],
+			"ip":  ["22"],
+		},
+
+		// SSH to the servers and to my own devices from my own devices: Tailscale SSH into the
+		// tagged servers, and ordinary SSH to the workstation and almaserv.
+		// Infrastructure as code decision #118.
+		{
+			"src": ["autogroup:member"],
+			"dst": ["tag:hub", "tag:vault", "tag:bastion", "autogroup:self"],
+			"ip":  ["22"],
+		},
+
+		// Infrastructure as code's jobs configure their staging machines over SSH.
+		// Infrastructure as code decision #63.
+		{
+			"src": ["tag:iac-runner"],
+			"dst": ["tag:staging"],
+			"ip":  ["22"],
+		},
+
+		// My own devices check a new house image's throwaway test VM over SSH.
+		// Infrastructure as code decision #121.
+		{
+			"src": ["autogroup:member"],
+			"dst": ["tag:house-test"],
+			"ip":  ["22"],
+		},
+
+		// Allow users in "group:example" to access "tag:example", but only from
+		// devices that are running macOS and have enabled Tailscale client auto-updating.
+		// {"src": ["group:example"], "dst": ["tag:example"], "ip": ["*"], "srcPosture":["posture:autoUpdateMac"]},
+	],
+
+	// Define postures that will be applied to all rules without any specific
+	// srcPosture definition.
+	// "defaultSrcPosture": [
+	//      "posture:anyMac",
+	// ],
+
+	// Define device posture rules requiring devices to meet
+	// certain criteria to access parts of your system.
+	// "postures": {
+	//      // Require devices running macOS, a stable Tailscale
+	//      // version and auto update enabled for Tailscale.
+	//  "posture:autoUpdateMac": [
+	//      "node:os == 'macos'",
+	//      "node:tsReleaseTrack == 'stable'",
+	//      "node:tsAutoUpdate",
+	//  ],
+	//      // Require devices running macOS and a stable
+	//      // Tailscale version.
+	//  "posture:anyMac": [
+	//      "node:os == 'macos'",
+	//      "node:tsReleaseTrack == 'stable'",
+	//  ],
+	// },
+
+	// Define users and devices that can use Tailscale SSH.
+	"ssh": [
+		// Allow all users to SSH into their own devices in check mode.
+		// Comment this section out if you want to define specific restrictions.
+		{
+			"action": "check",
+			"src":    ["autogroup:member"],
+			"dst":    ["autogroup:self"],
+			"users":  ["autogroup:nonroot", "root"],
+		},
+		{
+			"src":    ["autogroup:member"],
+			"dst":    ["tag:hub"],
+			"users":  ["keepbreath0"],
+			"action": "check",
+		},
+		{
+			"src":    ["autogroup:member"],
+			"dst":    ["tag:vault"],
+			"users":  ["keepbreath0"],
+			"action": "check",
+		},
+		{
+			"src":    ["autogroup:member"],
+			"dst":    ["tag:bastion"],
+			"users":  ["keepbreath0"],
+			"action": "check",
+		},
+	],
+
+	"tagOwners": {
+		// vault-server
+		"tag:vault": ["autogroup:admin"],
+
+		// hub-server
+		"tag:hub": ["autogroup:admin"],
+
+		// bastion-server
+		"tag:bastion": ["autogroup:admin"],
+
+		// Infrastructure as code's job runners. OpenBao on the hub decision #70.
+		"tag:iac-runner": ["autogroup:admin"],
+
+		// Infrastructure as code's short-lived staging machines. The runners mint their keys,
+		// so tag:iac-runner owns the tag. Infrastructure as code decision #63.
+		"tag:staging": ["tag:iac-runner"],
+
+		// Infrastructure as code's throwaway test VMs for new house images.
+		// Infrastructure as code decision #121.
+		"tag:house-test": ["autogroup:admin"],
+	},
+
+	// Machines tagged tag:hub are approved automatically to serve the hub's Services, so a
+	// rebuilt hub comes back reachable without a click in the console. Notification service
+	// decision #19; Monitoring and alerting decision #18.
+	"autoApprovers": {
+		"services": {
+			"svc:grafana": ["tag:hub"],
+			"svc:ntfy":    ["tag:hub"],
+			"svc:backup":  ["tag:hub"],
+			"svc:openbao": ["tag:hub"],
+			"svc:tofu-state": ["tag:hub"],
+		},
+	},
+
+	"nodeAttrs": [
+		{
+			// Funnel policy, which lets tailnet members control Funnel
+			// for their own devices.
+			// Learn more at https://tailscale.com/kb/1223/tailscale-funnel/
+			"target": ["autogroup:member"],
+			"attr":   ["funnel"],
+		},
+	],
+
+	// Test access rules every time they're saved. Every grant has a test that it allows what it
+	// should and one that it refuses what it shouldn't (Testing and CI decision #10).
+	"tests": [
+		{
+			"src": "100.109.30.18",
+			"proto": "tcp",
+			"accept": [
+				"svc:openbao:443",
+				"svc:vault:443",
+				"svc:grafana:443",
+				"100.95.89.6:22",
+				"100.65.221.62:22",
+				"100.91.226.31:22",
+				"100.116.181.55:22",
+				"100.116.219.6:22",
+				"tag:house-test:22"
+			],
+			"deny": [
+				"10.128.0.3:22",
+				"10.128.0.4:22",
+				"svc:tofu-state:443",
+				"svc:backup:443",
+				"tag:staging:22"
+			]
+		},
+		{
+			"src": "tag:hub",
+			"proto": "tcp",
+			"accept": [
+				"svc:grafana:443",
+				"svc:openbao:443",
+				"svc:ntfy:443",
+				"svc:vault:443",
+				"svc:tofu-state:443",
+				"10.128.0.3:22",
+				"10.128.0.4:22",
+				"10.128.0.3:9100",
+				"100.116.219.6:19531",
+				"100.65.221.62:9882"
+			],
+			"deny": [
+				"100.91.226.31:22",
+				"100.116.181.55:22",
+				"10.128.0.4:9882",
+				"tag:house-test:22",
+				"100.116.181.55:9100",
+				"100.116.181.55:19531",
+				"tag:staging:22"
+			]
+		},
+		{
+			"src": "tag:vault",
+			"proto": "tcp",
+			"accept": [
+				"svc:backup:443"
+			],
+			"deny": [
+				"svc:openbao:443",
+				"100.95.89.6:22",
+				"svc:tofu-state:443",
+				"svc:ntfy:443",
+				"svc:grafana:443",
+				"10.128.0.3:9100",
+				"100.116.219.6:19531",
+				"10.128.0.3:9882"
+			]
+		},
+		{
+			"src": "tag:iac-runner",
+			"proto": "tcp",
+			"accept": [
+				"svc:openbao:443",
+				"svc:tofu-state:443",
+				"tag:staging:22"
+			],
+			"deny": [
+				"100.95.89.6:22",
+				"svc:vault:443",
+				"svc:backup:443",
+				"10.128.0.3:22"
+			]
+		},
+		{
+			"src": "tag:house-test",
+			"proto": "tcp",
+			"accept": [],
+			"deny": [
+				"svc:openbao:443",
+				"svc:tofu-state:443",
+				"100.95.89.6:22",
+				"10.128.0.3:22",
+				"100.116.181.55:22"
+			]
+		}
+	],
+
+	// "tests": [
+	//   {
+	//       "src": "alice@example.com",
+	//       "accept": ["tag:example"],
+	//       "deny": ["100.101.102.103:443"],
+	//   },
+	// ],
+}
