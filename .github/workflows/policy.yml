@@ -1,0 +1,21 @@
+# Disposable: proves keepbreathing-infra item 5's tailnet policy check end to end, with the
+# federated identity's values given as plain strings in the secrets block.
+name: Policy check
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  tailscale:
+    uses: sh4i-yurei/ci-workflows/.github/workflows/tailscale.yml@5ce0cdb94c901ded89ecef7ca91e1a1c5c17bb8b
+    permissions:
+      contents: read
+      id-token: write
+    with:
+      policy_file: tailscale/policy.hujson
+    secrets:
+      TS_OAUTH_ID: TJqYefgm8i11CNTRL-kHsN2HPrM311CNTRL
+      TS_AUDIENCE: api.tailscale.com/TJqYefgm8i11CNTRL-kHsN2HPrM311CNTRL
+      TS_TAILNET: "-"
