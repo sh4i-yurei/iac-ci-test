@@ -301,8 +301,7 @@
 			"proto": "tcp",
 			"accept": [
 				"svc:openbao:443",
-				"svc:tofu-state:443",
-				"tag:staging:22"
+				"svc:tofu-state:443"
 			],
 			"deny": [
 				"100.95.89.6:22",
