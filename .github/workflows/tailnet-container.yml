@@ -1,0 +1,22 @@
+# Disposable: join the tailnet, then reach a tailnet service from the pinned OpenTofu image.
+name: tailnet container
+on:
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  reach:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: tailscale/github-action@064b10558093f38325e838ddea35486bdc6b1d5c
+        with:
+          oauth-client-id: TJqYefgm8i11CNTRL-k2WNft4nH111CNTRL
+          audience: api.tailscale.com/TJqYefgm8i11CNTRL-k2WNft4nH111CNTRL
+          tags: tag:iac-runner
+      - name: Reach OpenBao from the pinned OpenTofu image
+        run: |
+          img=ghcr.io/opentofu/opentofu@sha256:ae50c733c0d953baf7104f191f53c7fce4544413e1d2009da24f498ceb83a7c5
+          echo "TOFU $(docker run --rm --network host $img version | head -1)"
+          echo "HEALTH $(docker run --rm --network host --entrypoint wget $img -qO- https://openbao.tail4cf2f3.ts.net/v1/sys/health)"
