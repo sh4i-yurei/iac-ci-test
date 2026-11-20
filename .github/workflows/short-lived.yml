@@ -1,5 +1,5 @@
 # Disposable: shows the OIDC claims a reusable workflow gets when another repository calls it,
-# and that a job with no needs runs beside a failing one.
+# and whether Tailscale accepts that token for an identity requiring this file's job_workflow_ref.
 name: short-lived
 on:
   workflow_call: {}
@@ -11,15 +11,12 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - name: Print the token's claims, not the token
+      - name: Exchange the job's token with two Tailscale identities
         run: |
-          tok=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=iac-verification" | jq -r .value)
-          python3 -c 'import sys,json,base64; p=sys.argv[1].split(".")[1]; p+="="*(-len(p)%4); c=json.loads(base64.urlsafe_b64decode(p)); print("CLAIMS", json.dumps({k:c.get(k) for k in ["event_name","repository","repository_id","ref","workflow_ref","job_workflow_ref","sub"]}))' "$tok"
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "deploy fails on purpose"; exit 1
-  destroy:
-    runs-on: ubuntu-latest
-    steps:
-      - run: echo "DESTROY RAN"
+          for pair in "good TJqYefgm8i11CNTRL-kcFghrJwS711CNTRL" "other-file TJqYefgm8i11CNTRL-kobpz75LXi11CNTRL"; do
+            set -- $pair
+            jwt=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api.tailscale.com/$2" | jq -r .value)
+            code=$(printf 'client_id=%s&jwt=%s' "$2" "$jwt" | curl -s -o /tmp/x.json -w '%{http_code}' --data-binary @- https://api.tailscale.com/api/v2/oauth/token-exchange)
+            echo "EXCHANGE $1: HTTP $code $(jq -c '{message, error}' /tmp/x.json 2>/dev/null | head -c 200)"
+            rm -f /tmp/x.json
+          done
