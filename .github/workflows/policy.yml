@@ -23,5 +23,5 @@ jobs:
   event:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: echo "EVENT actor=${{ github.actor }} head_repo_id=${{ github.event.pull_request.head.repo.id }} repository_id=${{ github.repository_id }} head_fork=${{ github.event.pull_request.head.repo.fork }}"
