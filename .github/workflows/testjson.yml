@@ -1,0 +1,18 @@
+# Disposable: Test-Json's verdicts on the classes schema, on GitHub's windows-2025 runner.
+name: test json
+on:
+  workflow_dispatch: {}
+permissions:
+  contents: read
+jobs:
+  verdicts:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - shell: pwsh
+        run: |
+          "PWSH $($PSVersionTable.PSVersion)"
+          Get-ChildItem testjson/cases/*.json | Sort-Object Name | ForEach-Object {
+            $ok = Test-Json -Json (Get-Content -Raw $_.FullName) -SchemaFile testjson/catalog.schema.json -ErrorAction SilentlyContinue
+            "VERDICT $($_.BaseName)=$ok"
+          }
