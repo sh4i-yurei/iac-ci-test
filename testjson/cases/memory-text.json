@@ -1,0 +1,74 @@
+{
+  "digitalocean": {
+    "region": "atl1",
+    "bake_class": "bake",
+    "classes": {
+      "bake": {
+        "sizes": [
+          "s-1vcpu-1gb-intel",
+          "s-1vcpu-1gb-amd"
+        ]
+      },
+      "small": {
+        "sizes": [
+          "s-1vcpu-1gb-35gb-intel",
+          "s-1vcpu-1gb-amd"
+        ]
+      }
+    },
+    "machines": {
+      "web": {
+        "class": "small"
+      },
+      "mail": {
+        "class": "small"
+      },
+      "control": {
+        "class": "small"
+      }
+    }
+  },
+  "house": {
+    "classes": {
+      "house-small": {
+        "cpus": 1,
+        "memory_mb": "3072",
+        "disk_gb": 20
+      },
+      "house-medium": {
+        "cpus": 4,
+        "memory_mb": 6144,
+        "disk_gb": 40
+      },
+      "house-large": {
+        "cpus": 4,
+        "memory_mb": 8192,
+        "disk_gb": 80
+      }
+    },
+    "machines": {
+      "hub": {
+        "class": "house-medium",
+        "network": {
+          "type": "bridged",
+          "adapter": "Intel(R) Ethernet Connection (7) I219-LM"
+        },
+        "disks": [
+          {
+            "path": "C:\\VirtualMachines\\hub\\hub-backup.vdi",
+            "controller": "SATA",
+            "port": 1,
+            "device": 0
+          }
+        ]
+      },
+      "VaultServ": {
+        "class": "house-small",
+        "network": {
+          "type": "bridged",
+          "adapter": "Intel(R) Ethernet Connection (7) I219-LM"
+        }
+      }
+    }
+  }
+}
