@@ -1,0 +1,25 @@
+# Disposable: shows the OIDC claims a reusable workflow gets when another repository calls it,
+# and that a job with no needs runs beside a failing one.
+name: short-lived
+on:
+  workflow_call: {}
+permissions:
+  contents: read
+jobs:
+  claims:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - name: Print the token's claims, not the token
+        run: |
+          tok=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=iac-verification" | jq -r .value)
+          python3 -c 'import sys,json,base64; p=sys.argv[1].split(".")[1]; p+="="*(-len(p)%4); c=json.loads(base64.urlsafe_b64decode(p)); print("CLAIMS", json.dumps({k:c.get(k) for k in ["event_name","repository","repository_id","ref","workflow_ref","job_workflow_ref","sub"]}))' "$tok"
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "deploy fails on purpose"; exit 1
+  destroy:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "DESTROY RAN"
