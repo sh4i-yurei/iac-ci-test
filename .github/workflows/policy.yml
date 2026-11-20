@@ -1,21 +1,27 @@
-# Disposable: proves keepbreathing-infra item 5's tailnet policy check end to end, with the
-# federated identity's values given as plain strings in the secrets block.
+# Disposable: proves keepbreathing-infra item 5's tailnet policy check end to end, including on
+# Dependabot's pull requests, with the federated identity's values as plain strings.
 name: Policy check
 on:
   push:
     branches: [main]
+  pull_request: {}
   workflow_dispatch: {}
 permissions:
   contents: read
 jobs:
   tailscale:
-    uses: sh4i-yurei/ci-workflows/.github/workflows/tailscale.yml@5ce0cdb94c901ded89ecef7ca91e1a1c5c17bb8b
+    uses: sh4i-yurei/ci-workflows/.github/workflows/tailscale.yml@abf03158b1efda671529abb6b5b5c6f430d18fc4
     permissions:
       contents: read
       id-token: write
     with:
       policy_file: tailscale/policy.hujson
     secrets:
-      TS_OAUTH_ID: TJqYefgm8i11CNTRL-kHsN2HPrM311CNTRL
-      TS_AUDIENCE: api.tailscale.com/TJqYefgm8i11CNTRL-kHsN2HPrM311CNTRL
+      TS_OAUTH_ID: TJqYefgm8i11CNTRL-kkqarpCNxF11CNTRL
+      TS_AUDIENCE: api.tailscale.com/TJqYefgm8i11CNTRL-kkqarpCNxF11CNTRL
       TS_TAILNET: tail4cf2f3.ts.net
+  event:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "EVENT actor=${{ github.actor }} head_repo_id=${{ github.event.pull_request.head.repo.id }} repository_id=${{ github.repository_id }} head_fork=${{ github.event.pull_request.head.repo.fork }}"
